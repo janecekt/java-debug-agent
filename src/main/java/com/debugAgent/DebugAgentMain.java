@@ -56,7 +56,7 @@ public class DebugAgentMain {
             "java.net.ServerSocket::bind(java.net.SocketAddress, int)",
             "java.net.DatagramSocket::bind(java.net.SocketAddress)",
             "java.net.DatagramSocket::connect(java.net.SocketAddress)",
-            "java.net.DatagramSocket::connect(java.net.SocketAddress, int)"
+            "java.net.DatagramSocket::connect(java.net.InetAddress, int)"
     };
 
     public static void premain(String agentArgs, Instrumentation inst) {
@@ -161,22 +161,24 @@ public class DebugAgentMain {
                 byte[] byteCode = ctClass.toBytecode();
                 ctClass.detach();
                 return byteCode;
-            } catch (Exception ex) {
-                logError("Failed to instrument class " + className + " : " + ex.getMessage());
+            } catch (Throwable ex) {
+                logError("Failed to instrument class " + className + " : " + ex);
                 return null;
             }
         }
 
-        private void instrumentMethod(ClassPool pool, CtClass ctClass, MethodDesc desc) {
+        private void instrumentMethod(ClassPool pool, CtClass ctClass, MethodDesc methodDesc) {
             try {
-                CtClass[] methodArgs = Stream.of(desc.getMethodArgs())
+                logDebug("Instrumenting " + methodDesc);
+
+                CtClass[] methodArgs = Stream.of(methodDesc.getMethodArgs())
                         .map(type -> getCtClass(pool, type))
                         .toArray(CtClass[]::new);
 
-                CtMethod ctMethod = ctClass.getDeclaredMethod(desc.getMethodName(), methodArgs);
+                CtMethod ctMethod = ctClass.getDeclaredMethod(methodDesc.getMethodName(), methodArgs);
                 logReturn(ctMethod);
-            } catch (Exception ex) {
-                logError("Failed to instrument class " + ctClass.getName() + ", method " + desc + " : " + ex.getMessage());
+            } catch (Throwable ex) {
+                logError("Failed to instrument class " + ctClass.getName() + ", method " + methodDesc + " : " + ex);
             }
         }
 
@@ -186,15 +188,13 @@ public class DebugAgentMain {
                     return CtClass.intType;
                 }
                 return pool.getCtClass(className);
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
                 throw new RuntimeException("Class not found " + className, ex);
             }
         }
 
         private void logReturn(CtMethod m)  {
             try {
-                logDebug("Instrumenting " + m.getDeclaringClass().getSimpleName() + "::" + m.getName());
-
                 // Success handler
                 String successCode = getCodeLogMethodArgsAndResult(m, "$_");
                 m.insertAfter(successCode);
@@ -203,7 +203,7 @@ public class DebugAgentMain {
                 String errorCode = "{ " + getCodeLogMethodArgsAndResult(m, "$ex") + "; throw $ex; }";
                 CtClass exceptionClass = ClassPool.getDefault().getCtClass("java.lang.Exception");
                 m.addCatch(errorCode, exceptionClass, "$ex");
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
                 logError("Failed to instrument method " + m + " : " + ex);
             }
         }
@@ -271,10 +271,10 @@ public class DebugAgentMain {
 
         @Override
         public String toString() {
-            return "MethodDesc{" +
-                    "methodName='" + methodName + '\'' +
-                    ", methodArgs=" + Arrays.toString(methodArgs) +
-                    '}';
+            return className + "::" + methodName
+                    + Arrays.toString(methodArgs)
+                            .replace("[", "(")
+                            .replace("]", ")");
         }
     }
 }
