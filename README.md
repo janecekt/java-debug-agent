@@ -66,3 +66,8 @@ java -javaagent:target/debug-agent-0.1-SNAPSHOT.jar=debug=true;methods=java.net.
     * Example: <pre>java.net.InetAddress::getByName(java.lang.String)</pre>
     * You can include multiple methods separated by **|**
     * If omitted - if omitted the a DNS lookups, opening TCP/UDP connections is logged.
+
+# Contributions #
+  * **If you wish to contribute and/or submit a pull request please do so on GitLab**
+  * The repository is maintained on GitLab [https://gitlab.com/janecekt/java-debug-agent](https://gitlab.com/janecekt/java-debug-agent) 
+  * It is mirrored to GitHub as a read-only copy but it is not maintained there any more
